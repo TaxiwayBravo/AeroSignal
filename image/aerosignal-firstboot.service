@@ -8,6 +8,8 @@ Before=aerosignal-dashboard.service
 Type=oneshot
 ExecStart=/usr/bin/python3 /opt/aerosignal/scripts/appliance_first_boot.py
 RemainAfterExit=yes
+Restart=on-failure
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target

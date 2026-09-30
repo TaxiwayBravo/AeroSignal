@@ -17,6 +17,7 @@ LOCALE_DEFAULT=en_GB.UTF-8
 KEYBOARD_KEYMAP=gb
 KEYBOARD_LAYOUT="English (UK)"
 TIMEZONE_DEFAULT=Europe/London
+WPA_COUNTRY=GB
 STAGE_LIST="stage0 stage1 stage2 stage-aerosignal"
 EOF
 cd "$work"

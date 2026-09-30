@@ -18,6 +18,10 @@ def uplink_online():
 def main():
     if not shutil.which('nmcli'):
         raise SystemExit('NetworkManager is required.')
+    run(['rfkill', 'unblock', 'wifi'])
+    radio = run(['nmcli', 'radio', 'wifi', 'on'])
+    if radio.returncode:
+        raise SystemExit('Could not enable the Wi-Fi radio: ' + radio.stderr.strip())
     for _ in range(20):
         if uplink_online():
             return
@@ -28,8 +32,10 @@ def main():
         return
     # This temporary password is public by design and only provides transport to
     # the one-time claim page. The owner creates the real admin password there.
-    run(['nmcli', 'device', 'wifi', 'hotspot', 'ifname', interfaces[0], 'con-name',
-         'AeroSignal-Setup', 'ssid', 'AeroSignal-Setup', 'password', 'aerosignal'])
+    result = run(['nmcli', 'device', 'wifi', 'hotspot', 'ifname', interfaces[0], 'con-name',
+                  'AeroSignal-Setup', 'ssid', 'AeroSignal-Setup', 'password', 'aerosignal'])
+    if result.returncode:
+        raise SystemExit('Could not create the setup hotspot: ' + result.stderr.strip())
 
 
 if __name__ == '__main__':
