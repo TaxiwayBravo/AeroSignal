@@ -10,6 +10,7 @@ rm -rf "$work/aerosignal-source/.git" "$work/aerosignal-source/.pi-gen"
 chmod +x "$work/stage-aerosignal/prerun.sh" "$work/stage-aerosignal/00-install/"*.sh
 cat > "$work/config" <<EOF
 IMG_NAME=AeroSignal
+TARGET_HOSTNAME=aerosignal
 RELEASE=trixie
 DEPLOY_COMPRESSION=xz
 ENABLE_SSH=0

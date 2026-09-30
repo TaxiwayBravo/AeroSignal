@@ -24,7 +24,7 @@ AirNav's binary requires a 4 KB page kernel. Some Pi 5 systems use 16 KB pages. 
 1. Download the `AeroSignal-*.img.xz` artifact from the GitHub **Build Raspberry Pi image** workflow.
 2. In Raspberry Pi Imager choose **Use custom**, select that file and write it to the SD card. The image defaults to the GB Wi-Fi regulatory domain; setting your own country in Imager is recommended outside the United Kingdom. OS customisation and SSH are optional.
 3. Insert the card, attach the RTL-SDR and antenna, then power on the Pi. AeroSignal does not ask for an operating-system username; its build-time account is locked and SSH is disabled.
-4. With Ethernet connected, open `http://aerosignal.local:8080` from the same network. AeroSignal detects the wired address, hides Wi-Fi settings, and asks for the administrator password.
+4. With Ethernet connected, open `http://aerosignal.local:8080` from the same network. The image sets its hostname to `aerosignal`; if `.local` discovery is unavailable on your computer, use the IP address shown by your router or the Pi's console. AeroSignal detects the wired address, hides Wi-Fi settings, and asks for the administrator password.
 5. Without Ethernet, join `AeroSignal-Setup` with password `aerosignal`, open `http://10.42.0.1:8080`, create the administrator password, then select the home Wi-Fi network. Reconnect at `http://aerosignal.local:8080` after the Pi joins it.
 
 The setup hotspot password is intentionally public and only protects the temporary link. Create the administrator password immediately. The claim endpoint closes after that password is saved. Keep AeroSignal on a trusted home network and do not forward its ports from the router.

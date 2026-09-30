@@ -16,6 +16,7 @@ from manager.settings import build_settings, public_settings, read_env, write_en
 from manager.service import Controller, password_record
 from manager.network import Network, validate_network, keyfile, split_fields
 import server
+import scripts.install_manager as install_manager
 
 BASE = {'station': {'name': 'Test station', 'latitude': '51.5', 'longitude': '-0.1',
                     'altitude': '25', 'timezone': 'UTC', 'device': '0'},
@@ -109,6 +110,10 @@ class AuthenticationTests(unittest.TestCase):
             self.assertTrue(controller.authenticated(result['token']))
             self.assertEqual(controller.dispatch('POST', '/setup', {
                 'password': 'another-password', 'confirmation': 'another-password'})[0], 409)
+
+    def test_manager_unit_allows_password_file_directory(self):
+        source = Path(install_manager.__file__).read_text()
+        self.assertIn('ReadWritePaths={ROOT} /etc/aerosignal ', source)
 
     def test_browser_csrf_and_httponly_cookie(self):
         with tempfile.TemporaryDirectory() as tmp:
