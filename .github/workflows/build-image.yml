@@ -1,0 +1,25 @@
+name: Build Raspberry Pi image
+on:
+  workflow_dispatch:
+jobs:
+  image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - branch: arm64
+            architecture: arm64
+          - branch: master
+            architecture: armhf
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build AeroSignal OS image
+        run: bash image/build.sh "$RUNNER_TEMP/pi-gen" "${{ matrix.branch }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aerosignal-raspberry-pi-image-${{ matrix.architecture }}
+          path: ${{ runner.temp }}/pi-gen/deploy/*.img.xz
+          if-no-files-found: error
+          retention-days: 14

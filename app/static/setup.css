@@ -1,0 +1,5 @@
+.setup-dialog{max-width:500px}
+.setup-dialog::backdrop{background:#0d2039e8}
+.setup-connection{display:flex;flex-direction:column;gap:3px;background:#edf8f3;border:1px solid #cae9dc;border-radius:8px;padding:13px 15px;color:#24705b;margin:18px 0}
+.setup-connection span{font-size:10px;color:#658679}
+.setup-dialog label{margin-top:15px}

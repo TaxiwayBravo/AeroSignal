@@ -1,0 +1,23 @@
+[Unit]
+Description=AeroSignal first-run dashboard
+After=network.target aerosignal-manager.service
+Wants=aerosignal-manager.service
+
+[Service]
+Type=simple
+User=nobody
+Group=nogroup
+WorkingDirectory=/opt/aerosignal/app
+Environment=BIND=0.0.0.0
+Environment=PORT=8080
+Environment=RECEIVER_URL=http://127.0.0.1:8081
+ExecStart=/usr/bin/python3 /opt/aerosignal/app/server.py
+Restart=always
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadOnlyPaths=/opt/aerosignal
+
+[Install]
+WantedBy=multi-user.target

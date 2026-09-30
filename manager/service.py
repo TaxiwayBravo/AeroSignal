@@ -23,9 +23,10 @@ def password_record(password):
 
 
 class Controller:
-    def __init__(self, project, auth, preview=False):
+    def __init__(self, project, auth=None, preview=False, auth_path=None):
         self.project = Path(project)
         self.auth = auth
+        self.auth_path = Path(auth_path) if auth_path else None
         self.preview = preview
         self.sessions = {}
         self.failures = []
@@ -44,6 +45,8 @@ class Controller:
 
     def login(self, password):
         with self.lock:
+            if not self.auth:
+                return 409, {'error': 'Create the station administrator password first.'}
             now = time.time()
             self.failures = [t for t in self.failures if now - t < 300]
             if len(self.failures) >= 5:
@@ -58,6 +61,33 @@ class Controller:
             token = secrets.token_urlsafe(32)
             self.sessions[token] = now + 3600
             return 200, {'token': token, 'message': 'Settings unlocked for one hour.'}
+
+    def setup(self, password, confirmation):
+        with self.lock:
+            if self.auth:
+                return 409, {'error': 'This station has already been claimed.'}
+            if not isinstance(password, str) or not 12 <= len(password) <= 256:
+                return 400, {'error': 'Use an administrator password of 12–256 characters.'}
+            if password != confirmation:
+                return 400, {'error': 'Passwords did not match.'}
+            record = password_record(password)
+            if self.auth_path:
+                self.auth_path.parent.mkdir(mode=0o700, parents=True, exist_ok=True)
+                fd = os.open(self.auth_path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+                with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+                    json.dump(record, stream)
+            self.auth = record
+            token = secrets.token_urlsafe(32)
+            self.sessions[token] = time.time() + 3600
+            return 201, {'token': token, 'message': 'Administrator password created. This station is now protected.'}
+
+    def ethernet_connected(self):
+        try:
+            status = self.network.status()
+            return any(d.get('kind') == 'ethernet' and d.get('address') and
+                       str(d.get('state', '')).startswith('connected') for d in status.get('devices', []))
+        except (ValueError, OSError):
+            return False
 
     def compose(self, args, env_file=None, timeout=180):
         base = ['docker', 'compose', '--project-directory', str(self.project)]
@@ -112,7 +142,10 @@ class Controller:
 
     def dispatch(self, method, path, body, token=''):
         if path == '/session' and method == 'GET':
-            return 200, {'authenticated': self.authenticated(token), 'preview': self.preview, 'available': True}
+            return 200, {'authenticated': self.authenticated(token), 'preview': self.preview, 'available': True,
+                         'setup_required': not bool(self.auth), 'ethernet_connected': self.ethernet_connected()}
+        if path == '/setup' and method == 'POST':
+            return self.setup(body.get('password'), body.get('confirmation'))
         if path == '/login' and method == 'POST':
             return self.login(body.get('password'))
         if path == '/public' and method == 'GET':
@@ -178,7 +211,9 @@ def main():
     parser.add_argument('--socket', default='/run/aerosignal/manager.sock')
     parser.add_argument('--auth', default='/etc/aerosignal/admin.json')
     args = parser.parse_args()
-    controller = Controller(args.project, json.loads(Path(args.auth).read_text()))
+    auth_path = Path(args.auth)
+    auth = json.loads(auth_path.read_text()) if auth_path.exists() else None
+    controller = Controller(args.project, auth, auth_path=auth_path)
     class Server(socketserver.ThreadingMixIn, socketserver.UnixStreamServer):
         daemon_threads = True
     path = Path(args.socket)

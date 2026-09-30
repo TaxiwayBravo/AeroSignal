@@ -128,7 +128,11 @@ class Network:
             return {'available': False, 'devices': [], 'pending': None, 'message': 'Network settings require NetworkManager on the Raspberry Pi.'}
         with self.lock:
             pending = None if not self.pending else {k: self.pending[k] for k in ('id', 'deadline', 'interface', 'phase')}
-        return {'available': True, 'devices': self.devices(), 'pending': pending, 'message': self.last_result}
+        devices = self.devices()
+        ethernet_connected = any(d['kind'] == 'ethernet' and d['address'] and
+                                 d['state'].startswith('connected') for d in devices)
+        return {'available': True, 'devices': devices, 'ethernet_connected': ethernet_connected,
+                'pending': pending, 'message': self.last_result}
 
     def scan(self):
         rows = self.run(['nmcli', '-t', '-f', 'SSID,SIGNAL,SECURITY,DEVICE', 'device', 'wifi', 'list', '--rescan', 'yes'], timeout=35)

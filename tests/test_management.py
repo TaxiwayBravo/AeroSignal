@@ -18,7 +18,7 @@ from manager.network import Network, validate_network, keyfile, split_fields
 import server
 
 BASE = {'station': {'name': 'Test station', 'latitude': '51.5', 'longitude': '-0.1',
-                    'altitude': '25', 'timezone': 'Europe/London', 'device': '0'},
+                    'altitude': '25', 'timezone': 'UTC', 'device': '0'},
         'enabled': ['adsblol'], 'credentials': {}}
 DEVICES = [{'interface': 'eth0', 'kind': 'ethernet'}, {'interface': 'wlan0', 'kind': 'wifi'}]
 NET = {'interface': 'eth0', 'kind': 'ethernet', 'method': 'auto', 'dns': ''}
@@ -96,6 +96,20 @@ class AuthenticationTests(unittest.TestCase):
             self.assertEqual(controller.login('wrong')[0], 401)
         self.assertEqual(controller.login('test-password')[0], 429)
 
+    def test_first_run_claim_is_atomic_and_one_time(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / 'admin.json'
+            controller = Controller(tmp, auth_path=path, preview=True)
+            session = controller.dispatch('GET', '/session', {})[1]
+            self.assertTrue(session['setup_required'])
+            status, result = controller.dispatch('POST', '/setup', {
+                'password': 'a-secure-password', 'confirmation': 'a-secure-password'})
+            self.assertEqual(status, 201)
+            self.assertTrue(path.exists())
+            self.assertTrue(controller.authenticated(result['token']))
+            self.assertEqual(controller.dispatch('POST', '/setup', {
+                'password': 'another-password', 'confirmation': 'another-password'})[0], 409)
+
     def test_browser_csrf_and_httponly_cookie(self):
         with tempfile.TemporaryDirectory() as tmp:
             controller = Controller(tmp, self.auth, preview=True)
@@ -123,6 +137,15 @@ class AuthenticationTests(unittest.TestCase):
 
 
 class NetworkTests(unittest.TestCase):
+    def test_status_marks_connected_ethernet(self):
+        network = Network()
+        network.devices = lambda: [
+            {'interface': 'eth0', 'kind': 'ethernet', 'state': 'connected', 'address': '192.168.1.2/24'},
+            {'interface': 'wlan0', 'kind': 'wifi', 'state': 'disconnected', 'address': ''},
+        ]
+        with patch('manager.network.shutil.which', return_value='/usr/bin/tool'):
+            self.assertTrue(network.status()['ethernet_connected'])
+
     def test_static_validation(self):
         valid = {**NET, 'method': 'manual', 'address': '192.168.1.50/24', 'gateway': '192.168.1.1', 'dns': '1.1.1.1, 8.8.8.8'}
         self.assertEqual(validate_network(valid, DEVICES)['dns'], '1.1.1.1;8.8.8.8')

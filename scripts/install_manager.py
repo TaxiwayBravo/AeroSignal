@@ -1,7 +1,5 @@
 """Install the local management service on the Pi; run with sudo."""
 import argparse
-import getpass
-import json
 import os
 from pathlib import Path
 import re
@@ -11,13 +9,10 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from manager.service import password_record
-
-
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--keep-password', action='store_true')
     parser.add_argument('--reset-password', action='store_true')
+    parser.add_argument('--no-start', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if not hasattr(os, 'geteuid') or os.geteuid() != 0:
         raise SystemExit('Run on the Pi: sudo python3 scripts/install_manager.py')
@@ -26,23 +21,11 @@ def main():
     for program in ('nmcli', 'busctl', 'docker', 'systemctl'):
         if not shutil.which(program):
             raise SystemExit(f'{program} is missing. Install Docker and use Raspberry Pi OS with NetworkManager first.')
-    if not (ROOT / '.env').exists():
-        raise SystemExit('Run python3 scripts/configure.py once to configure the receiver, then install management.')
     config_dir = Path('/etc/aerosignal')
     config_dir.mkdir(mode=0o700, exist_ok=True)
     auth_path = config_dir / 'admin.json'
-    if args.keep_password and not auth_path.exists():
-        raise SystemExit('No administrator password exists. Run installer without --keep-password.')
-    if not auth_path.exists() or args.reset_password:
-        password = getpass.getpass('Create administrator password (at least 12 characters): ')
-        if len(password) < 12 or len(password) > 256:
-            raise SystemExit('Use 12–256 characters.')
-        if password != getpass.getpass('Repeat password: '):
-            raise SystemExit('Passwords did not match.')
-        fd = os.open(auth_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-        with os.fdopen(fd, 'w') as stream:
-            json.dump(password_record(password), stream)
-        auth_path.chmod(0o600)
+    if args.reset_password:
+        auth_path.unlink(missing_ok=True)
     destination = Path('/opt/aerosignal-manager')
     for directory in ('manager', 'scripts'):
         target = destination / directory
@@ -77,10 +60,11 @@ ProtectControlGroups=true
 WantedBy=multi-user.target
 '''
     Path('/etc/systemd/system/aerosignal-manager.service').write_text(unit)
-    subprocess.run(['systemctl', 'daemon-reload'], check=True)
     subprocess.run(['systemctl', 'enable', 'aerosignal-manager.service'], check=True)
-    subprocess.run(['systemctl', 'restart', 'aerosignal-manager.service'], check=True)
-    print('Management installed. Run bash scripts/start.sh, then use Unlock settings in AeroSignal.')
+    if not args.no_start:
+        subprocess.run(['systemctl', 'daemon-reload'], check=True)
+        subprocess.run(['systemctl', 'restart', 'aerosignal-manager.service'], check=True)
+    print('Management installed. Open AeroSignal in a browser to create the administrator password.')
 
 
 if __name__ == '__main__':

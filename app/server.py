@@ -37,7 +37,7 @@ class Handler(SimpleHTTPRequestHandler):
             data = receiver_snapshot()
             data.update(station=os.environ.get('STATION_NAME', 'AeroSignal station'),
                         map_url=os.environ.get('MAP_URL', ''),
-                        feeders=os.environ.get('ENABLED_FEEDERS', '').split(','), version='1.1.0')
+                        feeders=os.environ.get('ENABLED_FEEDERS', '').split(','), version='1.2.0')
             status, metadata = management.request('GET', '/public')
             if status == 200:
                 data.update(metadata)

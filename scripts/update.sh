@@ -15,7 +15,7 @@ git pull --ff-only
 docker compose config --quiet
 docker compose pull
 if systemctl is-active --quiet aerosignal-manager.service; then
-  sudo python3 scripts/install_manager.py --keep-password
+  sudo python3 scripts/install_manager.py
 fi
 bash scripts/start.sh
 echo "Update applied. Previous revision recorded in backups/revision-$stamp. Verify reception and provider delivery."

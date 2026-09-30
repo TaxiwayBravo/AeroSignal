@@ -1,0 +1,7 @@
+docker.io
+docker-compose-v2
+network-manager
+python3
+avahi-daemon
+rfkill
+unzip

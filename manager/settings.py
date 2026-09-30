@@ -36,10 +36,11 @@ def build_settings(old, body, page_size=None):
         if not value or len(value) > 100:
             raise ValueError(f'{field.capitalize()} is required (maximum 100 characters).')
         config[key] = safe(value)
-    try:
-        ZoneInfo(config['TZ'])
-    except (ZoneInfoNotFoundError, ValueError):
-        raise ValueError('Enter a valid timezone, for example Europe/London.')
+    if config['TZ'] != 'UTC':
+        try:
+            ZoneInfo(config['TZ'])
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ValueError('Enter a valid timezone, for example Europe/London.')
     updates = body.get('credentials', {})
     clears = body.get('clear_credentials', [])
     if not isinstance(updates, dict) or not isinstance(clears, list):

@@ -8,14 +8,14 @@ class PreviewNetwork:
     def __init__(self):
         self.pending = None
         self.items = [
-            {'interface': 'eth0', 'kind': 'ethernet', 'state': 'sample connection', 'connection': 'Example wired network', 'address': '192.168.1.50/24', 'gateway': '192.168.1.1', 'dns': '192.168.1.1'},
+            {'interface': 'eth0', 'kind': 'ethernet', 'state': 'connected', 'connection': 'Example wired network', 'address': '192.168.1.50/24', 'gateway': '192.168.1.1', 'dns': '192.168.1.1'},
             {'interface': 'wlan0', 'kind': 'wifi', 'state': 'sample interface', 'connection': '', 'address': '', 'gateway': '', 'dns': ''},
         ]
 
     def status(self):
         if self.pending and time.time() >= self.pending['deadline']:
             self.pending = None
-        return {'available': True, 'devices': self.items, 'pending': self.pending,
+        return {'available': True, 'devices': self.items, 'ethernet_connected': True, 'pending': self.pending,
                 'message': 'Preview only: interfaces and Wi-Fi networks below are examples. Applying settings does not change your computer.'}
 
     def scan(self):

@@ -2,7 +2,9 @@
 
 A local Raspberry Pi ADS-B station console with searchable live traffic, tar1090, receiver graphs, editable feeder settings for 13 platforms, and Wi-Fi/Ethernet management. The dashboard and its password-protected management service use the Python standard library; the radio software runs in SDR-Enthusiasts containers.
 
-**This is an installable application bundle, not a flashable SD-card image.** Internet is required to install Docker and download containers. An RTL-SDR and a 1090 MHz antenna are required for local reception. No provider accounts or keys are included. No feeds are enabled until you select them.
+The primary distribution is a compressed Raspberry Pi OS image for Raspberry Pi Imager. It boots as a headless appliance: connect Ethernet, or join the temporary `AeroSignal-Setup` Wi-Fi hotspot using password `aerosignal`, then open the dashboard. The first page requires the owner to create the station administrator password. No display or SSH session is required.
+
+Internet is required after network setup to download the receiver and feeder containers. An RTL-SDR and a 1090 MHz antenna are required for local reception. No provider accounts or keys are included. No feeds are enabled until you select them.
 
 ## Hardware support
 
@@ -17,7 +19,17 @@ The dashboard can run on Linux Pis with Python 3.9+. This does **not** mean ever
 
 AirNav's binary requires a 4 KB page kernel. Some Pi 5 systems use 16 KB pages. The startup script checks this when AirNav is selected; see the [upstream explanation](https://github.com/sdr-enthusiasts/docker-airnavradar#using-the-container-on-a-raspberry-pi-5) before changing your OS kernel configuration. Other feeds can be used without AirNav.
 
-## Install on a Pi
+## Install with Raspberry Pi Imager
+
+1. Download the `AeroSignal-*.img.xz` artifact from the GitHub **Build Raspberry Pi image** workflow.
+2. In Raspberry Pi Imager choose **Use custom**, select that file and write it to the SD card. OS customisation and SSH are optional.
+3. Insert the card, attach the RTL-SDR and antenna, then power on the Pi.
+4. With Ethernet connected, open `http://aerosignal.local:8080` from the same network. AeroSignal detects the wired address, hides Wi-Fi settings, and asks for the administrator password.
+5. Without Ethernet, join `AeroSignal-Setup` with password `aerosignal`, open `http://10.42.0.1:8080`, create the administrator password, then select the home Wi-Fi network. Reconnect at `http://aerosignal.local:8080` after the Pi joins it.
+
+The setup hotspot password is intentionally public and only protects the temporary link. Create the administrator password immediately. The claim endpoint closes after that password is saved. Keep AeroSignal on a trusted home network and do not forward its ports from the router.
+
+## Manual installation on Raspberry Pi OS
 
 1. Install Raspberry Pi OS Lite, connect it to your network, enable SSH if needed, and attach the RTL-SDR and antenna. Use a reliable power supply and a 16 GB or larger storage device.
 2. Install Python, Git, and unzip: `sudo apt update && sudo apt install -y python3 git unzip`.
@@ -40,7 +52,7 @@ sudo python3 scripts/install_manager.py
 bash scripts/start.sh
 ```
 
-The management installer asks you to create a station administrator password of at least 12 characters. It installs a root-owned system service used only through a private Unix socket; the dashboard container does not receive Docker, D-Bus, or NetworkManager access. Enter the **antenna's actual latitude, longitude, and altitude above sea level in metres**. Feeder and Wi-Fi credentials are stored only on the Pi, never returned to the browser, excluded from Git, and protected by local file permissions. Keep a private backup. Choose only platforms you want to share with; provider account terms apply.
+The management installer installs a root-owned system service used only through a private Unix socket. Open the dashboard to create an administrator password of at least 12 characters. The dashboard does not receive Docker, D-Bus, or NetworkManager access. Enter the **antenna's actual latitude, longitude, and altitude above sea level in metres**. Feeder and Wi-Fi credentials are stored only on the Pi, never returned to the browser, excluded from Git, and protected by local file permissions. Keep a private backup. Choose only platforms you want to share with; provider account terms apply.
 
 Open `http://<pi-ip>:8080` for AeroSignal or `http://<pi-ip>:8081` for tar1090. Find the IP with `hostname -I`. The dashboard's Live map tab embeds tar1090. Receiver graphs are at `http://<pi-ip>:8081/graphs1090/` when available in the upstream image. Restart policies bring the services back after a reboot while Docker is enabled.
 
@@ -63,7 +75,7 @@ Use **Feeder network** in the dashboard to enable platforms, save account keys, 
 
 ## Wi-Fi and Ethernet
 
-The **Wi-Fi & Ethernet** page uses NetworkManager, the default network stack on current Raspberry Pi OS. It can scan for Wi-Fi, join visible or hidden WPA2/WPA3 Personal networks, and configure DHCP or static IPv4 for Wi-Fi and Ethernet. Enterprise Wi-Fi, bonding, VLANs, hotspot mode, and static IPv6 are outside this release.
+The **Network** page uses NetworkManager. When Ethernet is connected and has an IPv4 address, AeroSignal shows only the wired interface and hides Wi-Fi settings. Without Ethernet it can scan for Wi-Fi, join visible or hidden WPA2/WPA3 Personal networks, and configure DHCP or static IPv4. Enterprise Wi-Fi, bonding, VLANs, and static IPv6 are outside this release.
 
 Before applying a change, AeroSignal asks you to review it. NetworkManager creates a system-level checkpoint with a two-minute timeout before any new profile is written or activated. Reconnect to AeroSignal at its new address and choose **Connection works · keep settings**. If you cannot reconnect, NetworkManager restores the previous state automatically. Keep a local console or known Ethernet connection available for the first network change. Existing profiles are left intact; AeroSignal creates a new profile with autoconnect disabled until you confirm it.
 
@@ -91,7 +103,7 @@ The updater refuses tracked local modifications, saves a private configuration b
 
 To roll back application source, review `backups/revision-*`, check out that commit, and run the startup script. To roll back containers, restore known-good image digests separately. Preserve `.env` and named volumes. Do not use `docker compose down -v` unless you want to erase receiver history/graphs.
 
-For ZIP installations, extract the new release into a new directory, copy the old private `.env` into it with mode 600, run `sudo python3 scripts/install_manager.py --keep-password` from the new directory, then run its startup script. Compose's fixed project name keeps the existing receiver volumes. Do not run both versions simultaneously. Build archives yourself with `python3 scripts/package.py`.
+For ZIP installations, extract the new release into a new directory, copy the old private `.env` into it with mode 600, run `sudo python3 scripts/install_manager.py` from the new directory, then run its startup script. Compose's fixed project name keeps the existing receiver volumes. Do not run both versions simultaneously. Build archives yourself with `python3 scripts/package.py`.
 
 ## Original Pi / Zero dashboard-only mode
 
@@ -114,8 +126,8 @@ Replace the example address with your receiver. `RECEIVER_URL` must expose `/dat
 - **No platform data:** check keys, location, network access and container logs. A selected feed is not evidence that the remote platform accepted it.
 - **Low memory:** reduce selected feeder containers and history usage; use dashboard-only mode on constrained boards.
 - **Stop:** `docker compose --profile fr24 --profile flightaware --profile airnav --profile opensky down` preserves named volumes.
-- **Management unavailable:** run `systemctl status aerosignal-manager` and `sudo journalctl -u aerosignal-manager`. Reinstall it from the current AeroSignal directory with `sudo python3 scripts/install_manager.py --keep-password`.
-- **Reset the station password:** run `sudo python3 scripts/install_manager.py --reset-password`, then reload the dashboard.
+- **Management unavailable:** run `systemctl status aerosignal-manager` and `sudo journalctl -u aerosignal-manager`. Reinstall it from the current AeroSignal directory with `sudo python3 scripts/install_manager.py`.
+- **Reset the station password:** run `sudo python3 scripts/install_manager.py --reset-password`, then immediately reload the dashboard and claim the station again.
 - **Network change is pending:** reconnect to the old or new address and confirm it. If neither opens, wait two minutes for NetworkManager's checkpoint rollback, then reconnect to the previous address.
 - **Security:** intended for a trusted LAN only. The settings UI is password protected, but HTTP does not encrypt traffic on your LAN. Do not expose ports 8080/8081 through a router; use a trusted VPN for remote access. `.env` is readable by root and Docker administrators. The browser-facing dashboard has no Docker socket, D-Bus mount, or direct NetworkManager access.
 
