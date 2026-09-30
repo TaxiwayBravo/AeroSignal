@@ -1,15 +1,8 @@
 name: Build Raspberry Pi image
 on:
   workflow_dispatch:
-    inputs:
-      architecture:
-        description: Image architecture to build
-        type: choice
-        options: [all, arm64, armhf]
-        default: all
 jobs:
   image:
-    if: inputs.architecture == 'all' || inputs.architecture == matrix.architecture
     runs-on: ubuntu-latest
     timeout-minutes: 180
     strategy:
