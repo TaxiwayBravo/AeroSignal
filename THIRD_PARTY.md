@@ -8,5 +8,6 @@ AeroSignal's original code is MIT licensed. Upstream images, binaries, databases
 - [AirNav Radar container](https://github.com/sdr-enthusiasts/docker-airnavradar)
 - [OpenSky Network container](https://github.com/sdr-enthusiasts/docker-opensky-network)
 - Python and Alpine Linux from the official Python Docker image.
+- [NetworkManager](https://networkmanager.dev/) supplies Wi-Fi/Ethernet discovery, connection activation, and timed checkpoint rollback on Raspberry Pi OS.
 
 Provider names identify supported integrations; AeroSignal is not affiliated with or endorsed by them. Configuration was checked against upstream documentation on 30 September 2026. Services may change endpoints, account requirements, binaries or supported architectures.

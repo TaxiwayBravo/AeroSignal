@@ -5,3 +5,4 @@ __pycache__/
 release/
 backups/
 .DS_Store
+.preview/

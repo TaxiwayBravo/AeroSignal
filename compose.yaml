@@ -17,6 +17,8 @@ services:
     read_only: true
     cap_drop: [ALL]
     security_opt: ['no-new-privileges:true']
+    volumes:
+      - /run/aerosignal:/run/aerosignal:ro
     logging: *logging
   ultrafeeder:
     image: ghcr.io/sdr-enthusiasts/docker-adsb-ultrafeeder:latest

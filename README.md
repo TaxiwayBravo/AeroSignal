@@ -1,6 +1,6 @@
 # AeroSignal
 
-A local Raspberry Pi ADS-B receiver console with a custom logo, searchable live traffic, tar1090, receiver graphs, and optional feeds to 13 platforms. The dashboard is small, dependency-free Python plus HTML/CSS/JavaScript. The radio software runs in SDR-Enthusiasts containers.
+A local Raspberry Pi ADS-B station console with searchable live traffic, tar1090, receiver graphs, editable feeder settings for 13 platforms, and Wi-Fi/Ethernet management. The dashboard and its password-protected management service use the Python standard library; the radio software runs in SDR-Enthusiasts containers.
 
 **This is an installable application bundle, not a flashable SD-card image.** Internet is required to install Docker and download containers. An RTL-SDR and a 1090 MHz antenna are required for local reception. No provider accounts or keys are included. No feeds are enabled until you select them.
 
@@ -22,10 +22,10 @@ AirNav's binary requires a 4 KB page kernel. Some Pi 5 systems use 16 KB pages. 
 1. Install Raspberry Pi OS Lite, connect it to your network, enable SSH if needed, and attach the RTL-SDR and antenna. Use a reliable power supply and a 16 GB or larger storage device.
 2. Install Python, Git, and unzip: `sudo apt update && sudo apt install -y python3 git unzip`.
 3. Install Docker Engine and the Compose plugin using [Docker's Debian instructions for 64-bit Pi OS](https://docs.docker.com/engine/install/debian/) or its [32-bit Pi OS instructions](https://docs.docker.com/engine/install/raspberry-pi-os/). Docker documents declining 32-bit support; prefer 64-bit where the hardware supports it. Ensure `docker compose version` works for your user. Docker group membership grants root-equivalent control; alternatively run the Docker scripts with sudo.
-4. Copy `aerosignal-1.0.0.zip` to the Pi, then run:
+4. Copy `aerosignal-1.1.0.zip` to the Pi, then run:
 
 ```bash
-unzip aerosignal-1.0.0.zip
+unzip aerosignal-1.1.0.zip
 cd aerosignal
 sudo bash scripts/prepare-usb.sh
 sudo reboot
@@ -36,10 +36,11 @@ The USB preparation reserves the RTL-SDR for radio reception instead of TV recep
 ```bash
 cd aerosignal
 python3 scripts/configure.py
+sudo python3 scripts/install_manager.py
 bash scripts/start.sh
 ```
 
-Enter the **antenna's actual latitude, longitude, and altitude above sea level in metres**. Feeder credentials are stored in `.env` with restrictive permissions, excluded from Git, and never sent to the dashboard. Keep a private backup. Choose only platforms you want to share with; provider account terms apply.
+The management installer asks you to create a station administrator password of at least 12 characters. It installs a root-owned system service used only through a private Unix socket; the dashboard container does not receive Docker, D-Bus, or NetworkManager access. Enter the **antenna's actual latitude, longitude, and altitude above sea level in metres**. Feeder and Wi-Fi credentials are stored only on the Pi, never returned to the browser, excluded from Git, and protected by local file permissions. Keep a private backup. Choose only platforms you want to share with; provider account terms apply.
 
 Open `http://<pi-ip>:8080` for AeroSignal or `http://<pi-ip>:8081` for tar1090. Find the IP with `hostname -I`. The dashboard's Live map tab embeds tar1090. Receiver graphs are at `http://<pi-ip>:8081/graphs1090/` when available in the upstream image. Restart policies bring the services back after a reboot while Docker is enabled.
 
@@ -58,7 +59,13 @@ Community feeds can be selected directly in the wizard. The four account-based f
 
 This release feeds ADS-B / Mode S at 1090 MHz. MLAT is disabled in the supplied account feeders and not configured for the community feeds. 978 MHz UAT needs a separate receiver and is not configured. Only Ultrafeeder owns the USB SDR; other containers consume its internal Beast stream. Beast ports are not published to the LAN.
 
-After changing feed choices, run `bash scripts/start.sh` again. It stops optional account feeders and restarts only selected ones. Check `docker compose ps`, `docker compose logs --tail=100 ultrafeeder`, and each provider's station page. The dashboard intentionally labels selection as unverified; it does not invent successful delivery status.
+Use **Feeder network** in the dashboard to enable platforms, save account keys, change the receiver location, and apply the services. Saved keys appear only as “saved securely”; they are never returned to the browser. If an apply fails, AeroSignal restores the previous `.env` and attempts to restore the previous services. Check `docker compose ps`, `docker compose logs --tail=100 ultrafeeder`, and each provider's station page. The dashboard intentionally labels selection as unverified; it does not invent successful delivery status.
+
+## Wi-Fi and Ethernet
+
+The **Wi-Fi & Ethernet** page uses NetworkManager, the default network stack on current Raspberry Pi OS. It can scan for Wi-Fi, join visible or hidden WPA2/WPA3 Personal networks, and configure DHCP or static IPv4 for Wi-Fi and Ethernet. Enterprise Wi-Fi, bonding, VLANs, hotspot mode, and static IPv6 are outside this release.
+
+Before applying a change, AeroSignal asks you to review it. NetworkManager creates a system-level checkpoint with a two-minute timeout before any new profile is written or activated. Reconnect to AeroSignal at its new address and choose **Connection works · keep settings**. If you cannot reconnect, NetworkManager restores the previous state automatically. Keep a local console or known Ethernet connection available for the first network change. Existing profiles are left intact; AeroSignal creates a new profile with autoconnect disabled until you confirm it.
 
 ## GitHub and updates
 
@@ -70,6 +77,7 @@ The project repository is [TaxiwayBravo/AeroSignal](https://github.com/TaxiwayBr
 git clone https://github.com/TaxiwayBravo/AeroSignal.git aerosignal
 cd aerosignal
 python3 scripts/configure.py
+sudo python3 scripts/install_manager.py
 bash scripts/start.sh
 ```
 
@@ -83,7 +91,7 @@ The updater refuses tracked local modifications, saves a private configuration b
 
 To roll back application source, review `backups/revision-*`, check out that commit, and run the startup script. To roll back containers, restore known-good image digests separately. Preserve `.env` and named volumes. Do not use `docker compose down -v` unless you want to erase receiver history/graphs.
 
-For ZIP installations, extract the new release into a new directory, copy the old private `.env` into it with mode 600, and run its startup script. Compose's fixed project name keeps the existing receiver volumes. Do not run both versions simultaneously. Build archives yourself with `python3 scripts/package.py`.
+For ZIP installations, extract the new release into a new directory, copy the old private `.env` into it with mode 600, run `sudo python3 scripts/install_manager.py --keep-password` from the new directory, then run its startup script. Compose's fixed project name keeps the existing receiver volumes. Do not run both versions simultaneously. Build archives yourself with `python3 scripts/package.py`.
 
 ## Original Pi / Zero dashboard-only mode
 
@@ -106,7 +114,10 @@ Replace the example address with your receiver. `RECEIVER_URL` must expose `/dat
 - **No platform data:** check keys, location, network access and container logs. A selected feed is not evidence that the remote platform accepted it.
 - **Low memory:** reduce selected feeder containers and history usage; use dashboard-only mode on constrained boards.
 - **Stop:** `docker compose --profile fr24 --profile flightaware --profile airnav --profile opensky down` preserves named volumes.
-- **Security:** intended for a trusted LAN only. No dashboard login/TLS is provided. Do not expose ports 8080/8081 through a router; use a VPN for remote access. `.env` is readable by Docker administrators. The dashboard has no Docker socket or browser-based command execution.
+- **Management unavailable:** run `systemctl status aerosignal-manager` and `sudo journalctl -u aerosignal-manager`. Reinstall it from the current AeroSignal directory with `sudo python3 scripts/install_manager.py --keep-password`.
+- **Reset the station password:** run `sudo python3 scripts/install_manager.py --reset-password`, then reload the dashboard.
+- **Network change is pending:** reconnect to the old or new address and confirm it. If neither opens, wait two minutes for NetworkManager's checkpoint rollback, then reconnect to the previous address.
+- **Security:** intended for a trusted LAN only. The settings UI is password protected, but HTTP does not encrypt traffic on your LAN. Do not expose ports 8080/8081 through a router; use a trusted VPN for remote access. `.env` is readable by root and Docker administrators. The browser-facing dashboard has no Docker socket, D-Bus mount, or direct NetworkManager access.
 
 ## Development and verification
 
@@ -117,4 +128,4 @@ bash -n scripts/start.sh scripts/update.sh scripts/prepare-usb.sh
 python3 scripts/package.py
 ```
 
-Local validation covers receiver freshness/error handling, configuration input checks, syntax, and dashboard navigation. Docker and an SDR were unavailable on the build machine, so container startup, Pi architecture behavior, tar1090 integration, and delivery to providers require a hardware acceptance test. The GitHub workflow validates the Compose build on each push; inspect the Actions result for the revision you install. See THIRD_PARTY.md for upstream components and docs/branding.md for the logo generation record.
+Local validation covers receiver freshness/error handling, password sessions and rate limiting, CSRF protection, credential masking, atomic configuration writes, feeder rollback, network input validation, checkpoint ordering and rollback, syntax, and dashboard navigation. Docker, NetworkManager, and an SDR were unavailable on the build machine, so Pi service installation, real network switching, container startup, tar1090 integration, and delivery to providers require a hardware acceptance test. The GitHub workflow validates the Compose build on each push; inspect the Actions result for the revision you install. See THIRD_PARTY.md for upstream components and docs/branding.md for the logo generation record.

@@ -7,6 +7,7 @@ case "$(uname -m)" in
   *) echo 'Unsupported architecture for the packaged receiver stack.'; exit 1 ;;
 esac
 test -f .env || { echo 'Run python3 scripts/configure.py first.'; exit 1; }
+test -S /run/aerosignal/manager.sock || echo 'Note: web settings are unavailable until you run: sudo python3 scripts/install_manager.py'
 docker compose version >/dev/null || { echo 'Install Docker Engine with the Compose plugin; see README.'; exit 1; }
 test -d /dev/bus/usb || { echo 'No USB bus found. Attach your RTL-SDR.'; exit 1; }
 docker compose config --quiet

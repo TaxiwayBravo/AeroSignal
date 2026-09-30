@@ -14,5 +14,8 @@ docker compose images > "backups/images-$stamp.txt"
 git pull --ff-only
 docker compose config --quiet
 docker compose pull
+if systemctl is-active --quiet aerosignal-manager.service; then
+  sudo python3 scripts/install_manager.py --keep-password
+fi
 bash scripts/start.sh
 echo "Update applied. Previous revision recorded in backups/revision-$stamp. Verify reception and provider delivery."

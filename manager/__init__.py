@@ -1,0 +1,1 @@
+"""Local AeroSignal management service."""
