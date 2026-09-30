@@ -19,7 +19,7 @@ FIELDS = {'name': 'STATION_NAME', 'latitude': 'FEEDER_LAT', 'longitude': 'FEEDER
 
 
 def public_settings(config):
-    return {'station': {k: config.get(v, '') for k, v in FIELDS.items()},
+    return {'station': {k: config.get(v, '0' if k == 'device' else '') for k, v in FIELDS.items()},
             'enabled': [x for x in config.get('ENABLED_FEEDERS', '').split(',') if x],
             'credentials': {k: bool(config.get(k)) for k in CREDENTIALS}}
 

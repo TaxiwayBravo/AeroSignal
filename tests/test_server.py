@@ -16,6 +16,29 @@ from validate_config import validate
 
 
 class ReceiverTests(unittest.TestCase):
+    def test_map_is_proxied_on_dashboard_origin(self):
+        class Response(io.BytesIO):
+            status = 200
+            headers = {'Content-Type': 'text/html', 'Cache-Control': 'max-age=10'}
+            def __enter__(self):
+                return self
+            def __exit__(self, *_):
+                self.close()
+
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with patch('server.urlopen', return_value=Response(b'<html><head></head><body>tar1090</body></html>')):
+                with urlopen(f'http://127.0.0.1:{httpd.server_port}/map/') as response:
+                    body = response.read()
+                    self.assertIn(b'<base href="/map/">', body)
+                    self.assertEqual(response.headers['X-Frame-Options'], 'SAMEORIGIN')
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+            thread.join()
+
     def test_http_api_and_static_isolation(self):
         httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
         thread = threading.Thread(target=httpd.serve_forever, daemon=True)

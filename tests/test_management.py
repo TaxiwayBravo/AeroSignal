@@ -26,6 +26,9 @@ NET = {'interface': 'eth0', 'kind': 'ethernet', 'method': 'auto', 'dns': ''}
 
 
 class SettingsTests(unittest.TestCase):
+    def test_first_sdr_is_selected_automatically(self):
+        self.assertEqual(public_settings({})['station']['device'], '0')
+
     def test_preserve_and_mask_secret(self):
         data = copy.deepcopy(BASE)
         data['enabled'] = ['fr24', 'adsblol']

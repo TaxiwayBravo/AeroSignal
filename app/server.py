@@ -8,7 +8,7 @@ import management
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.request import urlopen
-from urllib.error import URLError
+from urllib.error import HTTPError, URLError
 
 STATIC = Path(__file__).parent / 'static'
 UPSTREAM = os.environ.get('RECEIVER_URL', 'http://ultrafeeder')
@@ -31,6 +31,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self):
         path = self.path.split('?')[0]
+        if path.startswith('/map/'):
+            return self.map_proxy()
         if path.startswith('/api/manage/'):
             return self.manage('GET', path)
         if path == '/api/status':
@@ -53,6 +55,27 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
         else:
             super().do_GET()
+
+    def map_proxy(self):
+        """Serve tar1090 through the dashboard origin without exposing port 8081."""
+        suffix = self.path.removeprefix('/map/').lstrip('/')
+        target = UPSTREAM.rstrip('/') + '/' + suffix
+        try:
+            with urlopen(target, timeout=15) as response:
+                content = response.read()
+                content_type = response.headers.get('Content-Type', 'application/octet-stream')
+                if not suffix.split('?', 1)[0] and 'text/html' in content_type:
+                    content = content.replace(b'<head>', b'<head><base href="/map/">', 1)
+                self.send_response(response.status)
+                self.send_header('Content-Type', content_type)
+                self.send_header('Cache-Control', response.headers.get('Cache-Control', 'no-cache'))
+                self.send_header('Content-Length', str(len(content)))
+                self.end_headers()
+                self.wfile.write(content)
+        except HTTPError as exc:
+            self.send_error(exc.code)
+        except (URLError, OSError):
+            self.send_error(502, 'Receiver map is not available yet')
 
     def json_response(self, status, body, cookie=None):
         encoded = json.dumps(body).encode()
@@ -102,7 +125,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
-        self.send_header('X-Frame-Options', 'DENY')
+        self.send_header('X-Frame-Options', 'SAMEORIGIN')
         self.send_header('Referrer-Policy', 'same-origin')
         super().end_headers()
 

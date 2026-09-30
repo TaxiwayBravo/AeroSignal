@@ -56,7 +56,7 @@ bash scripts/start.sh
 
 The management installer installs a root-owned system service used only through a private Unix socket. Open the dashboard to create an administrator password of at least 12 characters. The dashboard does not receive Docker, D-Bus, or NetworkManager access. Enter the **antenna's actual latitude, longitude, and altitude above sea level in metres**. Feeder and Wi-Fi credentials are stored only on the Pi, never returned to the browser, excluded from Git, and protected by local file permissions. Keep a private backup. Choose only platforms you want to share with; provider account terms apply.
 
-Open `http://<pi-ip>:8080` for AeroSignal or `http://<pi-ip>:8081` for tar1090. Find the IP with `hostname -I`. The dashboard's Live map tab embeds tar1090. Receiver graphs are at `http://<pi-ip>:8081/graphs1090/` when available in the upstream image. Restart policies bring the services back after a reboot while Docker is enabled.
+Open `http://<pi-ip>:8080` for AeroSignal. Find the IP with `hostname -I`. The dashboard proxies its integrated tar1090 interface under `/map/`, so users do not need to expose or connect to port 8081 separately. Receiver graphs are available under `/map/graphs1090/` when the upstream image provides them. Restart policies bring the services back after a reboot while Docker is enabled.
 
 There are no fabricated aircraft in the app. Before a working receiver is connected, it shows an offline state. The overview radar is a station illustration; actual plotted positions and map controls are in tar1090. Aircraft without recent position reports may still appear in the traffic table.
 
