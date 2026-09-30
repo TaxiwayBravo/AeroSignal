@@ -29,6 +29,8 @@ AirNav's binary requires a 4 KB page kernel. Some Pi 5 systems use 16 KB pages. 
 
 The setup hotspot password is intentionally public and only protects the temporary link. Create the administrator password immediately. The claim endpoint closes after that password is saved. Keep AeroSignal on a trusted home network and do not forward its ports from the router.
 
+Connect the RTL-SDR to the Zero 2 W's **USB/data** port through a data-capable OTG adapter or powered hub, not the `PWR IN` connector. The appliance image reserves supported RTL-SDR devices for readsb by blacklisting the conflicting DVB television drivers before first boot.
+
 ## Manual installation on Raspberry Pi OS
 
 1. Install Raspberry Pi OS Lite, connect it to your network, enable SSH if needed, and attach the RTL-SDR and antenna. Use a reliable power supply and a 16 GB or larger storage device.

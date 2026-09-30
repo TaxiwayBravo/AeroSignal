@@ -115,6 +115,12 @@ class AuthenticationTests(unittest.TestCase):
         source = Path(install_manager.__file__).read_text()
         self.assertIn('ReadWritePaths={ROOT} /etc/aerosignal ', source)
 
+    def test_appliance_reserves_rtl_sdr_for_readsb(self):
+        stage = Path(__file__).resolve().parents[1] / 'image/stage-aerosignal/00-install/01-run-chroot.sh'
+        source = stage.read_text()
+        self.assertIn('blacklist rtl2832_sdr', source)
+        self.assertIn('blacklist dvb_usb_rtl28xxu', source)
+
     def test_browser_csrf_and_httponly_cookie(self):
         with tempfile.TemporaryDirectory() as tmp:
             controller = Controller(tmp, self.auth, preview=True)
