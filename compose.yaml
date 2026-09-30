@@ -1,0 +1,100 @@
+name: aerosignal
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '2'
+services:
+  dashboard:
+    build: .
+    restart: unless-stopped
+    ports: ['${BIND_IP:-0.0.0.0}:8080:8080']
+    environment:
+      RECEIVER_URL: http://ultrafeeder
+      STATION_NAME: ${STATION_NAME:-AeroSignal}
+      ENABLED_FEEDERS: ${ENABLED_FEEDERS:-}
+      MAP_URL: ${MAP_URL:-}
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ['no-new-privileges:true']
+    logging: *logging
+  ultrafeeder:
+    image: ghcr.io/sdr-enthusiasts/docker-adsb-ultrafeeder:latest
+    restart: unless-stopped
+    ports: ['${BIND_IP:-0.0.0.0}:8081:80']
+    device_cgroup_rules: ['c 189:* rwm']
+    environment:
+      TZ: ${TZ:-Europe/London}
+      READSB_DEVICE_TYPE: rtlsdr
+      READSB_RTLSDR_DEVICE: ${SDR_DEVICE:-0}
+      READSB_GAIN: auto
+      READSB_LAT: ${FEEDER_LAT:?Run the setup wizard first}
+      READSB_LON: ${FEEDER_LONG:?Run the setup wizard first}
+      READSB_ALT: ${FEEDER_ALT_M:?Run the setup wizard first}m
+      READSB_RX_LOCATION_ACCURACY: '2'
+      READSB_STATS_RANGE: 'true'
+      UUID: ${FEEDER_UUID:?Run the setup wizard first}
+      ULTRAFEEDER_CONFIG: ${ULTRAFEEDER_CONFIG:-}
+      TAR1090_PAGETITLE: ${STATION_NAME:-AeroSignal}
+      TAR1090_ENABLE_AC_DB: 'true'
+      GRAPHS1090_DARKMODE: 'true'
+    volumes:
+      - /dev/bus/usb:/dev/bus/usb
+      - receiver-history:/var/globe_history
+      - receiver-graphs:/var/lib/collectd
+      - /proc/diskstats:/proc/diskstats:ro
+    tmpfs: ['/run:exec,size=128M', '/tmp:size=64M']
+    logging: *logging
+  fr24:
+    image: ghcr.io/sdr-enthusiasts/docker-flightradar24:latest
+    profiles: [fr24]
+    restart: unless-stopped
+    environment:
+      BEASTHOST: ultrafeeder
+      BEASTPORT: '30005'
+      FR24KEY: ${FR24KEY:-}
+      MLAT: 'no'
+    dns_search: .
+    logging: *logging
+  flightaware:
+    image: ghcr.io/sdr-enthusiasts/docker-piaware:latest
+    profiles: [flightaware]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/London}
+      RECEIVER_TYPE: relay
+      BEASTHOST: ultrafeeder
+      BEASTPORT: '30005'
+      FEEDER_ID: ${FLIGHTAWARE_ID:-}
+      ALLOW_MLAT: 'no'
+    tmpfs: ['/run:exec,size=64M', '/var/log:size=32M']
+    logging: *logging
+  airnav:
+    image: ghcr.io/sdr-enthusiasts/docker-airnavradar:latest
+    profiles: [airnav]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/London}
+      BEASTHOST: ultrafeeder
+      SHARING_KEY: ${AIRNAV_KEY:-}
+      LAT: ${FEEDER_LAT}
+      LONG: ${FEEDER_LONG}
+      ALT: ${FEEDER_ALT_M}
+      ENABLE_MLAT: 'false'
+    logging: *logging
+  opensky:
+    image: ghcr.io/sdr-enthusiasts/docker-opensky-network:latest
+    profiles: [opensky]
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ:-Europe/London}
+      BEASTHOST: ultrafeeder
+      OPENSKY_USERNAME: ${OPENSKY_USERNAME:-}
+      OPENSKY_SERIAL: ${OPENSKY_SERIAL:-}
+      LAT: ${FEEDER_LAT}
+      LONG: ${FEEDER_LONG}
+      ALT: ${FEEDER_ALT_M}
+    logging: *logging
+volumes:
+  receiver-history:
+  receiver-graphs:
