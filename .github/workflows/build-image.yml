@@ -1,6 +1,8 @@
 name: Build Raspberry Pi image
 on:
   workflow_dispatch:
+  push:
+    branches: [main, codex/initial-release]
 jobs:
   image:
     runs-on: ubuntu-latest
